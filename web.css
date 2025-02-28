@@ -1,4 +1,4 @@
-/* Dark gray background */
+
 body {
     background-color: #1e1e1e;
     color: white;
@@ -8,7 +8,7 @@ body {
     margin: 0;
 }
 
-/* Centered content box */
+
 .container {
     max-width: 600px;
     margin: auto;
@@ -21,20 +21,20 @@ body {
     animation: fadeIn 1s ease-in-out forwards;
 }
 
-/* Heading Style */
+
 h1 {
     color: #4da6ff; /* Light blue */
     font-size: 24px;
     margin-bottom: 10px;
 }
 
-/* Paragraph Style */
+
 p {
     font-size: 16px;
     line-height: 1.5;
 }
 
-/* Fade-in Animation */
+
 @keyframes fadeIn {
     to {
         opacity: 1;
